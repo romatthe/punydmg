@@ -1,5 +1,5 @@
 use std::cell::RefCell;
-use std::collections::{BTreeMap, HashMap};
+use std::collections::BTreeMap;
 use std::fmt;
 use std::fmt::{Display, Formatter};
 
@@ -34,7 +34,7 @@ impl Cpu {
 
         Self { regs, pc: 0, sp: 0 }
     }
-    
+
     fn set_flag(&self, flag: FlagName, value: bool) {
         let index = match flag {
             FlagName::Z => 7,
@@ -42,16 +42,16 @@ impl Cpu {
             FlagName::H => 5,
             FlagName::C => 4,
         };
-        let current_value = self.regs[&RegName::F].read_u8(&self); 
+        let current_value = self.regs[&RegName::F].read_u8(&self);
         let mask = 1 << index;
-        
+
         if value {
             self.regs[&RegName::F].write_u8(&self, current_value | mask);
         } else {
             self.regs[&RegName::F].write_u8(&self, current_value & !mask);
         }
     }
-    
+
     fn set_flags(&self, z: bool, n: bool, h: bool, c: bool) {
         let flag_nibble = c as u8 | ((h as u8) << 1) | ((n as u8) << 2) | ((z as u8) << 3);
         let flag_value = flag_nibble << 4;
@@ -170,5 +170,34 @@ impl RegValue for CpuRegisterPair {
 
         upper.write_u8(cpu, upper_val.try_into().unwrap());
         lower.write_u8(cpu, lower_val.try_into().unwrap());
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_set_flag() {
+        let cpu = Cpu::new();
+        cpu.set_flag(FlagName::Z, true);
+        assert_eq!(cpu.regs[&RegName::F].read_u8(&cpu), 0b1000_0000);
+        cpu.set_flag(FlagName::N, true);
+        assert_eq!(cpu.regs[&RegName::F].read_u8(&cpu), 0b1100_0000);
+        cpu.set_flag(FlagName::H, true);
+        assert_eq!(cpu.regs[&RegName::F].read_u8(&cpu), 0b1110_0000);
+        cpu.set_flag(FlagName::C, true);
+        assert_eq!(cpu.regs[&RegName::F].read_u8(&cpu), 0b1111_0000);
+        cpu.set_flag(FlagName::Z, false);
+        assert_eq!(cpu.regs[&RegName::F].read_u8(&cpu), 0b0111_0000);
+    }
+
+    #[test]
+    fn test_set_flags() {
+        let cpu = Cpu::new();
+        cpu.set_flags(true, false, false, true);
+        assert_eq!(cpu.regs[&RegName::F].read_u8(&cpu), 0b1001_0000);
+        cpu.set_flags(false, false, false, true);
+        assert_eq!(cpu.regs[&RegName::F].read_u8(&cpu), 0b0001_0000);
     }
 }
